@@ -1,0 +1,30 @@
+node_modules/
+dist/
+.next/
+.turbo/
+coverage/
+
+# env
+.env
+.env.local
+*.env.local
+
+# prisma generated client
+**/node_modules/.prisma/
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# os / editor
+.DS_Store
+Thumbs.db
+.idea/
+*.tsbuildinfo
+
+# prototypes / design drafts
+index.html
+Project Alpha.dc.html
+support.js
+

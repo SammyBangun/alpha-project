@@ -1,0 +1,17 @@
+{
+  "name": "@alpha/ui",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared design tokens + Tailwind preset for Project Alpha (web + mobile).",
+  "type": "module",
+  "exports": {
+    "./tokens": "./src/tokens.ts",
+    "./tailwind-preset": "./src/tailwind-preset.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "devDependencies": {
+    "tailwindcss": "^3.4.15"
+  }
+}

@@ -1,0 +1,159 @@
+// Project Alpha — Prisma schema (ARCHITECTURE §5).
+// DailyLog is the single immutable source of truth; every aggregate is derived from it.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ──────────────── IDENTITY ────────────────
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  displayName  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  identity      Identity?
+  dailyLogs     DailyLog[]
+  weeklyReviews WeeklyReview[]
+  envSnapshots  EnvSnapshot[]
+  objectives    Objective[]
+  achievements  UserAchievement[]
+  refreshTokens RefreshToken[]
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+// Vision, mission, alpha definition, life-domain progress
+model Identity {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  visionStatement  String   @db.Text
+  missionStatement String   @db.Text
+  alphaDefinition  String   @default("Alpha = a person who improves 1% every day, regardless of mood.")
+  updatedAt        DateTime @updatedAt
+}
+
+// ──────────────── DAILY ENGINE (the core table) ────────────────
+model DailyLog {
+  id     String   @id @default(cuid())
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date   DateTime @db.Date // one row per user per day
+
+  // mandatory rules (INPUT metrics)
+  noZeroDay       Boolean @default(false)
+  deepWorkHours   Float   @default(0)
+  workout         Boolean @default(false)
+  learningMinutes Int     @default(0)
+
+  // morning protocol
+  mit        String? @db.Text
+  intentions String? @db.Text
+
+  // night review
+  reflection String? @db.Text
+  lessons    String? @db.Text
+
+  // oath compliance (0..7 core values)
+  oathCount Int @default(0)
+
+  // canonical, server-computed
+  score Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, date]) // upsert key
+  @@index([userId, date])
+}
+
+// ──────────────── FEEDBACK LOOP ────────────────
+model WeeklyReview {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weekStart  DateTime @db.Date // Monday of the week
+  whatWorked String?  @db.Text
+  whatFailed String?  @db.Text
+  whyFailed  String?  @db.Text
+  adjustment String?  @db.Text // "System Failure > Personal Failure"
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, weekStart])
+}
+
+// ──────────────── ENVIRONMENT ────────────────
+model EnvSnapshot {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date             DateTime @db.Date
+  phoneDistraction Int      @default(50) // 0..100 (lower better)
+  workspaceQuality Int      @default(50)
+  sleepQuality     Int      @default(50)
+  focusEnvironment Int      @default(50)
+  createdAt        DateTime @default(now())
+
+  @@unique([userId, date])
+}
+
+// ──────────────── OBJECTIVES (Core / Quarterly / Long-term) ────────────────
+enum ObjectiveHorizon {
+  LONG_TERM
+  QUARTERLY
+}
+
+enum LifeDomain {
+  CAREER
+  PHYSICAL
+  MENTAL
+  FINANCIAL
+}
+
+model Objective {
+  id         String           @id @default(cuid())
+  userId     String
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title      String
+  horizon    ObjectiveHorizon
+  domain     LifeDomain
+  progress   Int              @default(0) // 0..100
+  targetDate DateTime?
+  createdAt  DateTime         @default(now())
+
+  @@index([userId, horizon])
+}
+
+// ──────────────── PROGRESSION / ACHIEVEMENTS ────────────────
+model Achievement {
+  id          String            @id @default(cuid())
+  key         String            @unique // 'streak_7', 'deep_diver_100h'...
+  name        String
+  description String
+  users       UserAchievement[]
+}
+
+model UserAchievement {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+  unlockedAt    DateTime    @default(now())
+
+  @@unique([userId, achievementId])
+}

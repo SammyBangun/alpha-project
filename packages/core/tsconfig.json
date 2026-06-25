@@ -1,0 +1,9 @@
+{
+  "extends": "@alpha/config/tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": ["vitest/globals"]
+  },
+  "include": ["src"]
+}
